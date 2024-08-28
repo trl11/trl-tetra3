@@ -104,6 +104,7 @@ import scipy.stats
 import scipy
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist, cdist
+import math
 
 from PIL import Image, ImageDraw
 
@@ -1392,7 +1393,7 @@ class Tetra3():
 
             # Now find the possible range of edge ratio patterns these four image centroids
             # could correspond to.
-            pattlen = int(np.math.factorial(p_size) / 2 / np.math.factorial(p_size - 2) - 1)
+            pattlen = int(math.factorial(p_size) / 2 / math.factorial(p_size - 2) - 1)
             image_pattern_edge_ratio_min = np.ones(pattlen)
             image_pattern_edge_ratio_max = np.zeros(pattlen)
 
