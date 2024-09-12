@@ -1231,7 +1231,7 @@ class Tetra3():
     def solve_from_centroids(self, star_centroids, size, fov_estimate=None, fov_max_error=None,
                              pattern_checking_stars=8, match_radius=.01, match_threshold=1e-3,
                              solve_timeout=None, target_pixel=None, distortion=0,
-                             return_matches=False, return_visual=False, prev_pattern_index=None):
+                             return_matches=False, return_visual=False, prev_pattern_coords=None):
         """Solve for the sky location using a list of centroids.
 
         Use :meth:`tetra3.get_centroids_from_image` or your own centroiding algorithm to find an
@@ -1381,9 +1381,18 @@ class Tetra3():
         # Try all combinations of p_size of pattern_checking_stars brightest
         patterns = itertools.combinations(range(min(len(image_centroids), pattern_checking_stars)), p_size)
         # If previously solved pattern is given, test first
-        if prev_pattern_index:
-            patterns = itertools.chain([prev_pattern_index], patterns)
-        for image_pattern_indices in patterns:
+        if prev_pattern_coords is not None:
+            guess_pattern = []
+            # Find centroids closest to the coordinates
+            for point in prev_pattern_coords:
+                distances = np.linalg.norm(image_centroids - np.array(point), axis=1)
+                guess_pattern.append(np.argmin(distances))
+
+            patterns = itertools.chain([tuple(guess_pattern)], patterns)
+
+        iter_count = 0
+        for image_pattern_indices in patterns:           
+            iter_count += 1
             image_pattern_centroids = image_centroids[image_pattern_indices, :]
             # Check if timeout has elapsed, then we must give up
             if solve_timeout is not None:
@@ -1396,7 +1405,7 @@ class Tetra3():
 
             # Now find the possible range of edge ratio patterns these four image centroids
             # could correspond to.
-            pattlen = int(math.factorial(p_size) / 2 / math.factorial(p_size - 2) - 1)
+            pattlen = int(np.math.factorial(p_size) / 2 / np.math.factorial(p_size - 2) - 1)
             image_pattern_edge_ratio_min = np.ones(pattlen)
             image_pattern_edge_ratio_max = np.zeros(pattlen)
 
@@ -1674,7 +1683,8 @@ class Tetra3():
                                          'epoch_equinox': self._db_props['epoch_equinox'],
                                          'epoch_proper_motion': self._db_props['epoch_proper_motion'],
                                          'T_solve': t_solve,
-                                         'pattern_ind': image_pattern_indices}
+                                         'pattern_ind': image_pattern_indices,
+                                         'solved_coords' : image_centroids[image_pattern_indices, :]}
 
                         # If we were given target pixel(s), calculate their ra/dec
                         if target_pixel is not None:
@@ -1746,16 +1756,17 @@ class Tetra3():
                             solution_dict['visual'] = img
 
                         self._logger.debug(solution_dict)
+                        print(f'Checked {iter_count} before solving')
                         return solution_dict
-
+        
         # Failed to solve, get time and return None
         t_solve = (precision_timestamp() - t0_solve) * 1000
         self._logger.debug('FAIL: Did not find a match to the stars! It took '
                            + str(round(t_solve)) + ' ms.')
         return {'RA': None, 'Dec': None, 'Roll': None, 'FOV': None, 'distortion': None,
                 'RMSE': None, 'Matches': None, 'Prob': None, 'epoch_equinox': None,
-                'epoch_proper_motion': None, 'T_solve': t_solve, 'pattern_ind': None}
-
+                'epoch_proper_motion': None, 'T_solve': t_solve, 'pattern_ind': None, 'solved_coords': None}
+ 
     def _get_nearby_stars(self, vector, radius):
         """Get star indices within radius radians of the vector."""
         # Stars must be within this cartesian cube
