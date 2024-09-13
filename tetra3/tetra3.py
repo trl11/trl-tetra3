@@ -1231,7 +1231,7 @@ class Tetra3():
     def solve_from_centroids(self, star_centroids, size, fov_estimate=None, fov_max_error=None,
                              pattern_checking_stars=8, match_radius=.01, match_threshold=1e-3,
                              solve_timeout=None, target_pixel=None, distortion=0,
-                             return_matches=False, return_visual=False, prev_pattern_coords=None):
+                             return_matches=False, return_visual=False, prev_pattern_coords=None, prev_brightness=None, current_brightness=None):
         """Solve for the sky location using a list of centroids.
 
         Use :meth:`tetra3.get_centroids_from_image` or your own centroiding algorithm to find an
@@ -1380,13 +1380,16 @@ class Tetra3():
 
         # Try all combinations of p_size of pattern_checking_stars brightest
         patterns = itertools.combinations(range(min(len(image_centroids), pattern_checking_stars)), p_size)
+        
         # If previously solved pattern is given, test first
         if prev_pattern_coords is not None:
             guess_pattern = []
-            # Find centroids closest to the coordinates
-            for point in prev_pattern_coords:
-                distances = np.linalg.norm(image_centroids - np.array(point), axis=1)
-                guess_pattern.append(np.argmin(distances))
+            # Find centroids with closest coordinates and brightness
+            prev_stats = np.column_stack((prev_pattern_coords, prev_brightness))
+            current_stats = np.column_stack((image_centroids, current_brightness[:num_stars]))
+            for point in prev_stats:
+                distances = np.linalg.norm(current_stats - np.array(point), axis=1)
+                guess_pattern.append(np.argmin(distances)) 
 
             patterns = itertools.chain([tuple(guess_pattern)], patterns)
 
