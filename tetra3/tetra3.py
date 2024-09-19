@@ -1383,15 +1383,15 @@ class Tetra3():
         
         # If previously solved pattern is given, test first
         if prev_pattern_coords is not None:
-            guess_pattern = []
-            # Find centroids with closest coordinates and brightness
-            prev_stats = np.column_stack((prev_pattern_coords, prev_brightness))
             current_stats = np.column_stack((image_centroids, current_brightness[:num_stars]))
-            for point in prev_stats:
-                distances = np.linalg.norm(current_stats - np.array(point), axis=1)
-                guess_pattern.append(np.argmin(distances)) 
-
-            patterns = itertools.chain([tuple(guess_pattern)], patterns)
+            for i in range(len(prev_pattern_coords)):
+                guess_pattern = []
+                prev_stats = np.column_stack((prev_pattern_coords[i], prev_brightness[i]))
+                for point in prev_stats:
+                    distances = np.linalg.norm(current_stats - np.array(point), axis=1)
+                    guess_pattern.append(np.argmin(distances)) 
+                patterns = itertools.chain([tuple(guess_pattern)], patterns)
+            
 
         iter_count = 0
         for image_pattern_indices in patterns:           
